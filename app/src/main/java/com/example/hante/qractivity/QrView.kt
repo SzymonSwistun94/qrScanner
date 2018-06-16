@@ -1,9 +1,14 @@
 package com.example.hante.qractivity
 
 import android.annotation.SuppressLint
+import android.app.Dialog
 import android.content.Context
 import android.graphics.*
 import android.hardware.Camera
+import android.os.Bundle
+import android.os.Handler
+import android.os.Message
+import android.os.Parcel
 import android.util.AttributeSet
 import android.util.Log
 import android.view.SurfaceHolder
@@ -25,9 +30,12 @@ class QrView(context: Context, attributeSet: AttributeSet) : SurfaceView(context
             .build()
 
     var cameraSource: CameraSource? = null
+    var parentHandler: Handler? = null
 
-    fun startQrDetection(onDetectedCallback: (List<String>) -> Unit) {
+    val texts = mutableListOf<String>()
 
+    fun startQrDetection(onDetectedCallback: (List<String>) -> Unit, handler: Handler) {
+       parentHandler = handler
         this.onDetectedCallback = onDetectedCallback
         holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
@@ -49,15 +57,15 @@ class QrView(context: Context, attributeSet: AttributeSet) : SurfaceView(context
                         if (p0 != null) {
                             val qrCodes = p0.detectedItems
                             if (qrCodes.size() > 0) {
-                                val texts = mutableListOf<String>()
 
                                 for (i in (0 until qrCodes.size())) {
-                                    texts.add(qrCodes.valueAt(i).rawValue)
-                                    Log.i("QrView", "Code detected with: ${qrCodes.valueAt(i).rawValue}")
+                                    this@QrView.texts.add(qrCodes.valueAt(i).rawValue)
                                 }
-
-                                stopQrDetection()
-                                onDetectedCallback?.invoke(texts)
+                                val message = Message.obtain(handler)
+                                val bundle = Bundle()
+                                bundle.putStringArrayList("texts", ArrayList(texts))
+                                message.setData(bundle)
+                                message.sendToTarget()
                             }
                         }
                     }
@@ -102,6 +110,7 @@ class QrView(context: Context, attributeSet: AttributeSet) : SurfaceView(context
                 val texts = mutableListOf<String>()
 
                 for (i in (0..qrCodes.size())) {
+                    Log.i("QrView", "Qr found: ${qrCodes.valueAt(i).rawValue}")
                     texts.add(qrCodes[i].rawValue)
                 }
 
